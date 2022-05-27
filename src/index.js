@@ -148,24 +148,31 @@ operators.$json = (template, context) => {
 operators.$let = (template, context) => {
   checkUndefinedProperties(template, ['\\$let', 'in']);
 
-  if (!isObject(template['$let'])) {
-    throw new TemplateError('$let value must be an object');
-  }
-  let variables = {};
+  let bindings = template['$let'];
+  bindings = isArray(bindings) ? bindings : [bindings];
 
-  let initialResult = render(template['$let'], context);
-  if (!isObject(initialResult)) {
-    throw new TemplateError('$let value must be an object');
-  }
-  Object.keys(initialResult).forEach(key => {
-    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
-      throw new TemplateError('top level keys of $let must follow /[a-zA-Z_][a-zA-Z0-9_]*/');
-    }else{
-      variables[key] = initialResult[key];
+  var child_context = Object.assign({}, context);
+
+  for (var kvs of bindings) {
+    if (!isObject(kvs)) {
+      throw new TemplateError('$let value must be an object');
     }
-  });
+    let variables = {};
 
-  var child_context = Object.assign(context, variables);
+    let initialResult = render(kvs, child_context);
+    if (!isObject(initialResult)) {
+      throw new TemplateError('$let value must be an object');
+    }
+    Object.keys(initialResult).forEach(key => {
+      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
+        throw new TemplateError('top level keys of $let must follow /[a-zA-Z_][a-zA-Z0-9_]*/');
+      }else{
+        variables[key] = initialResult[key];
+      }
+    });
+
+    Object.assign(child_context, variables);
+  }
 
   if (template.in == undefined) {
     throw new TemplateError('$let operator requires an `in` clause');
